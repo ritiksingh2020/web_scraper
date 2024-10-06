@@ -1,3 +1,4 @@
+import time
 import httpx
 from bs4 import BeautifulSoup
 import json
@@ -29,16 +30,28 @@ class Scraper:
         return scraped_products
 
     def _scrape_page(self, page_num: int):
-        try:
-            url = f"https://dentalstall.com/shop/page/{page_num}/"
-            response = self.session.get(url)
-            if response.status_code in [301,302,307]:
-                response = self.session.get(response.headers["Location"])
-            response.raise_for_status()
-            return response.text
-        except Exception as e:
-            print(f"Error in _scrape_page on page {page_num}: {e}")
-            raise e
+        retry_attempts = 3
+        retry_delays = [5, 10, 15]  
+
+        url = f"https://dentalstall.com/shop/page/{page_num}/"
+        
+        for attempt in range(retry_attempts):
+            try:
+                response = self.session.get(url, timeout=10)
+                if response.status_code in [301, 302, 307]:
+                    # Follow redirect if needed
+                    response = self.session.get(response.headers["Location"], timeout=10)
+                response.raise_for_status()
+                return response.text  # Successful response
+            except Exception as e:
+                print(f"Error in _scrape_page on page {page_num}, attempt {attempt + 1} of {retry_attempts}: {e}")
+
+                # If not the last attempt, sleep before retrying
+                if attempt < retry_attempts - 1:
+                    time.sleep(retry_delays[attempt])
+                else:
+                    # If all attempts fail, raise the exception
+                    raise e
 
     def _parse_page(self, html: str):
         try:
