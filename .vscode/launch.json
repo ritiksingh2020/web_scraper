@@ -5,11 +5,21 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Current File",
+            "name": "server",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/entrypoint.py",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "worker",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/entrypoint.py",   
+            "console": "integratedTerminal",
+            "args": [
+                "worker"
+            ]
         }
     ]
 }

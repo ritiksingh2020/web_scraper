@@ -6,8 +6,8 @@ from scrapper_tools.cache_manager import CacheManager
 from scrapper_tools.database import Database
 
 class Scraper:
-    def __init__(self, pages_limit: int, proxy: str = None):
-        self.pages_limit = pages_limit
+    def __init__(self, page: int,  proxy: str = None):
+        self.page = page
         self.proxy = proxy
         self.session = httpx.Client(proxies={'http': proxy, 'https': proxy}) if proxy else httpx.Client()
         self.cache = CacheManager()
@@ -15,18 +15,17 @@ class Scraper:
 
     def scrape(self):
         scraped_products = []
-        for page_num in range(1, self.pages_limit + 1):
-            try:
-                page_content = self._scrape_page(page_num)
-                products = self._parse_page(page_content)
-                for product in products:
-                    if self._has_changed(product):
-                        scraped_products.append(product)
-                        self.db.save_product(product)
-                        self.cache.update_product(product)
-            except Exception as e:
-                print(f"Error on page {page_num}: {e}")
-        print(f"Scraped {len(scraped_products)} products.")
+        try:
+            page_content = self._scrape_page(self.page)
+            products = self._parse_page(page_content)
+            for product in products:
+                if self._has_changed(product):
+                    scraped_products.append(product)
+                    self.cache.update_product(product)
+            self.db.save_product(scraped_products)
+        except Exception as e:
+            print(f"Error on page {self.page}: {e}")
+        print(f"Scraped and saved  {len(scraped_products)} products.")
         return scraped_products
 
     def _scrape_page(self, page_num: int):
