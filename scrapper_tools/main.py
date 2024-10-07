@@ -2,7 +2,7 @@ from fastapi import Depends, FastAPI
 
 from scrapper_tools.authentication import get_token
 from scrapper_tools.scraper import Scraper
-from scrapper_tools.worker import scrape_products_task
+from scrapper_tools.worker import scrape_products_task, scrape_products
 from scrapper_tools.worker import app as celery_app
 
 
@@ -17,12 +17,8 @@ async def health_check():
 
 @app.post("/scrape")
 def start_scrape(pages_limit: int = 5, proxy: str = None, token: str = Depends(get_token)):
-    task_ids = []
-    for page in range(1, pages_limit + 1):
-        task = scrape_products_task.delay(page, proxy)
-        task_ids.append(task.id)
-
-    return {"scraping task has started with task_ids": task_ids}
+    task = scrape_products.delay(pages_limit, proxy)
+    return {"scraping task has started with task_ids": task.id}
 
 
 @app.get("/scrape/status/{task_id}")

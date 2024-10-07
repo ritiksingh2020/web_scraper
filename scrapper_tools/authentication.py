@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-TOKEN = "static_token"
+TOKEN = "g4k8j9a2l1m6n7b3d5"
 
 security = HTTPBearer()
 

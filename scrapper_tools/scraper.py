@@ -1,18 +1,21 @@
 import time
 import httpx
+import logging
 from bs4 import BeautifulSoup
 import json
 import os
 from scrapper_tools.cache_manager import CacheManager
 from scrapper_tools.database import Database
+from logger_config import get_logger
 
 class Scraper:
-    def __init__(self, page: int,  proxy: str = None):
+    def __init__(self, page: int, proxy: str = None):
         self.page = page
         self.proxy = proxy
         self.session = httpx.Client(proxies={'http': proxy, 'https': proxy}) if proxy else httpx.Client()
         self.cache = CacheManager()
         self.db = Database()
+        self.logger = get_logger(__name__)
 
     def scrape(self):
         scraped_products = []
@@ -24,9 +27,9 @@ class Scraper:
                     scraped_products.append(product)
                     self.cache.update_product(product)
             self.db.save_product(scraped_products)
+            self.logger.info(f"Scraped and saved {len(scraped_products)} products.")
         except Exception as e:
-            print(f"Error on page {self.page}: {e}")
-        print(f"Scraped and saved  {len(scraped_products)} products.")
+            self.logger.error(f"Error on page {self.page}: {e}")
         return scraped_products
 
     def _scrape_page(self, page_num: int):
@@ -44,7 +47,7 @@ class Scraper:
                 response.raise_for_status()
                 return response.text  # Successful response
             except Exception as e:
-                print(f"Error in _scrape_page on page {page_num}, attempt {attempt + 1} of {retry_attempts}: {e}")
+                self.logger.error(f"Error in _scrape_page on page {page_num}, attempt {attempt + 1} of {retry_attempts}: {e}")
 
                 # If not the last attempt, sleep before retrying
                 if attempt < retry_attempts - 1:
@@ -63,13 +66,13 @@ class Scraper:
                 image_url = product.select_one("img").get("data-lazy-src")
                 image_path = self._download_image(image_url)
                 products.append({
-                "product_title": name,
-                "product_price": price,
-                "path_to_image": image_path
-            })
+                    "product_title": name,
+                    "product_price": price,
+                    "path_to_image": image_path
+                })
             return products
         except Exception as e:
-            print(f"Error in _parse_page: {e}")
+            self.logger.error(f"Error in _parse_page: {e}")
             raise e
 
     def _download_image(self, image_url: str):
@@ -81,7 +84,7 @@ class Scraper:
                 image_file.write(image_content)
             return image_path
         except Exception as e:
-            print(f"Error in _download_image: {e}")
+            self.logger.error(f"Error in _download_image: {e}")
             raise e
 
     def _has_changed(self, product):
@@ -91,5 +94,5 @@ class Scraper:
                 return True
             return cached_product["product_price"] != product["product_price"]
         except Exception as e:
-            print(f"Error in _has_changed: {e}")
+            self.logger.error(f"Error in _has_changed: {e}")
             raise e
